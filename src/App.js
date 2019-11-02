@@ -17,25 +17,17 @@ import {
 function App() {
   const [knotSocket, setKnotSocket] = React.useState(null);
   const [currentValue, setCurrentValue] = React.useState(null);
-  const [deviceId, setDeviceId] = React.useState(null);
-
-  const [history, setHistory] = React.useState([
-    /*{ name: "Page A", uv: 4000 },
-    { name: "Page B", uv: 3000 },
-    { name: "Page C", uv: 2000 },
-    { name: "Page D", uv: 1500 },
-    { name: "Page E", uv: 1890 },
-    { name: "Page F", uv: 2390 },
-    { name: "Page G", uv: 3490 }*/
-  ]);
+  //const [deviceId, setDeviceId] = React.useState(null);
+  const limit = 5;
+  const [history, setHistory] = React.useState([]);
 
   const [formState, { text }] = useFormState({
     protocol: "wss",
     hostname: "ws.cloud",
-    port: "443",
+    port: 443,
     pathname: "/",
-    id: "7d7d6432-4499-406e-80f5-c112ab95f728",
-    token: "698d0655441576c4add098c7274fa0b69c50c998",
+    id: "52fc75f9-861f-45fd-a38c-ddfe997fbd51",
+    token: "b9678bbd51623effc77d4a53b04885991abd7efa",
     deviceName: "Thing001",
     sensorId: "1"
   });
@@ -43,17 +35,22 @@ function App() {
   const newData = value => {
     console.log(value);
     setCurrentValue(value);
-    setHistory([...history, { name: Date.now.toString, uv: value }]);
+    console.log(history.length);
+    if(history.length > limit){
+      history.shift()
+    }
+    setHistory(history => [...history, { time: (new Date()).toLocaleTimeString(), value: value }]);
     console.log(history);
   };
 
   const handleSubmit = event => {
     event.preventDefault();
     const client = new KNoTCloudWebSocket(formState.values);
+    let deviceId;
+
     setKnotSocket(client);
 
-    client.connect();
-
+    console.log("cliente : " + {client})
     client.on("ready", () => {
       client.getDevices({
         type: "knot:thing"
@@ -62,20 +59,33 @@ function App() {
 
     client.on("devices", devicesReceived => {
       devicesReceived.forEach(device => {
-        if (device.metadata.name === formState.values.deviceName) {
-          setDeviceId(device.knot.id);
+        console.log(device.metadata.name);
+        console.log(formState.values.deviceName);
+        console.log(device.knot.id);
+        if (device.metadata.name == formState.values.deviceName) {
+          console.log('deu bom')
+          deviceId = device.knot.id;
+        }else{
+          console.log("error");
         }
+        console.log(deviceId)
       });
-      newData(10);
     });
 
     client.on("data", data => {
       console.log(data);
+      console.log(deviceId);
       if (deviceId === data.from) {
         console.log("call newData");
         newData(data.payload.value);
       }
     });
+
+    client.on("error", data => {
+      console.log({ "error" :data});
+    });
+
+    client.connect();
   };
 
   return (
@@ -89,10 +99,10 @@ function App() {
       }}
     >
       <nav
-        class="navbar navbar-dark"
+        className="navbar navbar-dark"
         style={{ backgroundColor: "#073358", color: "white", opacity: "0.95" }}
       >
-        <a class="navbar-brand" href="#">
+        <a className="navbar-brand" href="#">
           <img src={smart} height="50px" />
         </a>
       </nav>
@@ -109,26 +119,26 @@ function App() {
                     opacity: "0.9"
                   }}
                 >
-                  Cloud{" "}
+                  Cloud
                 </label>
-
                 <div className="card-body">
                   <div className="row">
-                    <label className="col-sm-4 col-form-label">Hostname </label>
+                    <label className="col-sm-4 col-form-label">
+                      
+                      Hostname
+                    </label>
                     <input
                       {...text("hostname")}
                       className="col-sm-8 form-control"
                       placeholder="hostname"
                     />
                   </div>
-
                   <div className="row">
-                    <label className="col-sm-4 col-form-label">Port </label>
+                    <label className="col-sm-4 col-form-label"> Port </label>
                     <input
                       {...text("port")}
                       className="col-sm-8 form-control"
                       placeholder="port"
-                      none
                     />
                   </div>
                 </div>
@@ -148,16 +158,15 @@ function App() {
                 </label>
                 <div className="card-body">
                   <div className="row">
-                    <label className="col-sm-4 col-form-label">Id </label>
+                    <label className="col-sm-4 col-form-label"> Id </label>
                     <input
                       {...text("id")}
                       className="col-sm-8 form-control"
                       placeholder="id"
                     />
                   </div>
-
                   <div className="row">
-                    <label className="col-sm-4 col-form-label">Token </label>
+                    <label className="col-sm-4 col-form-label"> Token </label>
                     <input
                       {...text("token")}
                       className="col-sm-8 form-control"
@@ -168,7 +177,6 @@ function App() {
               </div>
             </div>
           </div>
-
           <div className="col-sm-12 px-0 mt-2">
             <div className="card">
               <label
@@ -179,12 +187,12 @@ function App() {
                   opacity: "0.9"
                 }}
               >
-                Device{" "}
+                Device
               </label>
               <div className="card-body">
                 <div className="row">
                   <label className="col-sm-4 col-form-label">
-                    Device Name{" "}
+                    Device Name
                   </label>
                   <input
                     {...text("deviceName")}
@@ -192,9 +200,8 @@ function App() {
                     placeholder="deviceName"
                   />
                 </div>
-
                 <div className="row">
-                  <label className="col-sm-4 col-form-label">Sensor Id </label>
+                  <label className="col-sm-4 col-form-label"> Sensor Id </label>
                   <input
                     {...text("sensorId")}
                     className="col-sm-8 form-control"
@@ -211,7 +218,7 @@ function App() {
             Send
           </button>
         </form>
-        <h1>{currentValue}</h1>
+        <h1> {currentValue} </h1>
         <div className="card">
           <label
             className="card-header"
@@ -230,12 +237,12 @@ function App() {
                 margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
+                <XAxis dataKey="time" />
                 <YAxis />
                 <Tooltip />
                 <Area
                   type="monotone"
-                  dataKey="uv"
+                  dataKey="value"
                   stroke="#8884d8"
                   fill="#8884d8"
                 />
@@ -263,7 +270,7 @@ function App() {
             className="col-sm-8"
             style={{ color: "white", position: "center" }}
           >
-            <i>SmartLabs | 2019</i>
+            <i> SmartLabs | 2019 </i>
           </div>
           <div className="col-sm-4">
             <a
