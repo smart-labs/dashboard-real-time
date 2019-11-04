@@ -15,42 +15,39 @@ import {
 } from "recharts";
 
 function App() {
-  const [knotSocket, setKnotSocket] = React.useState(null);
-  const [currentValue, setCurrentValue] = React.useState(null);
-  //const [deviceId, setDeviceId] = React.useState(null);
+  const [errors, setErrors] = React.useState(null);
   const limit = 5;
   const [history, setHistory] = React.useState([]);
 
-  const [formState, { text }] = useFormState({
-    protocol: "wss",
-    hostname: "ws.cloud",
-    port: 443,
-    pathname: "/",
-    id: "52fc75f9-861f-45fd-a38c-ddfe997fbd51",
-    token: "b9678bbd51623effc77d4a53b04885991abd7efa",
-    deviceName: "Thing001",
-    sensorId: "1"
-  });
+  const [formState, { text }] = useFormState(
+    JSON.parse(localStorage.getItem("knot-credentials")) || {
+      protocol: "wss",
+      hostname: "",
+      port: "",
+      pathname: "/",
+      id: "",
+      token: "",
+      deviceName: "",
+      sensorId: ""
+    }
+  );
 
   const newData = value => {
-    console.log(value);
-    setCurrentValue(value);
-    console.log(history.length);
-    if(history.length > limit){
-      history.shift()
+    if (history.length > limit) {
+      history.shift();
     }
-    setHistory(history => [...history, { time: (new Date()).toLocaleTimeString(), value: value }]);
-    console.log(history);
+    setHistory(history => [
+      ...history,
+      { time: new Date().toLocaleTimeString(), value: value }
+    ]);
   };
 
   const handleSubmit = event => {
     event.preventDefault();
+    localStorage.setItem("knot-credentials", JSON.stringify(formState.values));
     const client = new KNoTCloudWebSocket(formState.values);
     let deviceId;
 
-    setKnotSocket(client);
-
-    console.log("cliente : " + {client})
     client.on("ready", () => {
       client.getDevices({
         type: "knot:thing"
@@ -59,30 +56,24 @@ function App() {
 
     client.on("devices", devicesReceived => {
       devicesReceived.forEach(device => {
-        console.log(device.metadata.name);
-        console.log(formState.values.deviceName);
-        console.log(device.knot.id);
-        if (device.metadata.name == formState.values.deviceName) {
-          console.log('deu bom')
+        if (device.metadata.name === formState.values.deviceName) {
           deviceId = device.knot.id;
-        }else{
+        } else {
           console.log("error");
+          setErrors("No device found");
         }
-        console.log(deviceId)
       });
     });
 
     client.on("data", data => {
-      console.log(data);
-      console.log(deviceId);
       if (deviceId === data.from) {
-        console.log("call newData");
         newData(data.payload.value);
       }
     });
 
     client.on("error", data => {
-      console.log({ "error" :data});
+      console.log({ error: data });
+      setErrors("socket connection error");
     });
 
     client.connect();
@@ -123,14 +114,12 @@ function App() {
                 </label>
                 <div className="card-body">
                   <div className="row">
-                    <label className="col-sm-4 col-form-label">
-                      
-                      Hostname
-                    </label>
+                    <label className="col-sm-4 col-form-label">Hostname</label>
                     <input
                       {...text("hostname")}
                       className="col-sm-8 form-control"
-                      placeholder="hostname"
+                      placeholder="ws.cloud"
+                      required="required"
                     />
                   </div>
                   <div className="row">
@@ -138,7 +127,8 @@ function App() {
                     <input
                       {...text("port")}
                       className="col-sm-8 form-control"
-                      placeholder="port"
+                      placeholder="433"
+                      required="required"
                     />
                   </div>
                 </div>
@@ -162,7 +152,8 @@ function App() {
                     <input
                       {...text("id")}
                       className="col-sm-8 form-control"
-                      placeholder="id"
+                      placeholder="52fc75f9-861..."
+                      required="required"
                     />
                   </div>
                   <div className="row">
@@ -170,7 +161,8 @@ function App() {
                     <input
                       {...text("token")}
                       className="col-sm-8 form-control"
-                      placeholder="token"
+                      placeholder="b9678bbd51..."
+                      required="required"
                     />
                   </div>
                 </div>
@@ -191,13 +183,12 @@ function App() {
               </label>
               <div className="card-body">
                 <div className="row">
-                  <label className="col-sm-4 col-form-label">
-                    Device Name
-                  </label>
+                  <label className="col-sm-4 col-form-label">Device Name</label>
                   <input
                     {...text("deviceName")}
                     className="col-sm-8 form-control"
-                    placeholder="deviceName"
+                    placeholder="Thing001"
+                    required="required"
                   />
                 </div>
                 <div className="row">
@@ -205,7 +196,8 @@ function App() {
                   <input
                     {...text("sensorId")}
                     className="col-sm-8 form-control"
-                    placeholder="sensorId"
+                    placeholder="1"
+                    required="required"
                   />
                 </div>
               </div>
@@ -218,7 +210,13 @@ function App() {
             Send
           </button>
         </form>
-        <h1> {currentValue} </h1>
+        {errors && (
+          <div className="alert alert-danger alert-dismissible fade show text-center">
+            <p>
+              <strong>An unexpected error occurred: </strong> {errors}
+            </p>
+          </div>
+        )}
         <div className="card">
           <label
             className="card-header"
