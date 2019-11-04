@@ -178,7 +178,7 @@ function App() {
                   color: "white",
                   opacity: "0.9"
                 }}
-              >
+              > 
                 Device
               </label>
               <div className="card-body">
