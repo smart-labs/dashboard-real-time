@@ -13,7 +13,7 @@
         "react-sparklines": "^1.7.0",
         "react-use-form-state": "^0.11.0",
         "recharts": "^1.8.5",
-        "ws": "^7.1.2"
+        "ws": "^7.4.6"
     },
     "scripts": {
         "start": "react-scripts start",
